@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2019 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -21,6 +21,7 @@
  *     Robin Stocker (robin@nibor.org) - Bug 399960: [Edit] Make merge arrow buttons easier to hit
  *     John Hendrikx (hjohn@xs4all.nl) - Bug 541401 - [regression] Vertical scrollbar thumb size is wrong in compare view
  *     Stefan Dirix (sdirix@eclipsesource.com) - Bug 473847: Minimum E4 Compatibility of Compare
+ *     Latha Patil (ETAS GmbH) - Issue #504 Show number of differences in the Compare editor
  *******************************************************************************/
 package org.eclipse.compare.contentmergeviewer;
 
@@ -3059,7 +3060,9 @@ public class TextMergeViewer extends ContentMergeViewer implements IAdaptable {
 		setSyncScrolling(fPreferenceStore.getBoolean(ComparePreferencePage.SYNCHRONIZE_SCROLLING));
 
 		update(false);
-
+		if (fMerger!=null) {
+			setDocumentDiffCount(fMerger.changesCount());
+		}
 		if (!fHasErrors && !emptyInput && !fComposite.isDisposed()) {
 			if (isRefreshing()) {
 				fLeftContributor.updateSelection(fLeft, !fSynchronizedScrolling);

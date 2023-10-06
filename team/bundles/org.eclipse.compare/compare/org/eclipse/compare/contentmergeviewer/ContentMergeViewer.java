@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2000, 2020 IBM Corporation and others.
+ * Copyright (c) 2000, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -13,6 +13,7 @@
  *     Alex Blewitt <alex.blewitt@gmail.com> - replace new Boolean with Boolean.valueOf - https://bugs.eclipse.org/470344
  *     Stefan Xenos <sxenos@gmail.com> (Google) - bug 448968 - Add diagnostic logging
  *     Conrad Groth - Bug 213780 - Compare With direction should be configurable
+ *     Latha Patil (ETAS GmbH) - Issue #504 Show number of differences in the Compare editor
  *******************************************************************************/
 
 package org.eclipse.compare.contentmergeviewer;
@@ -27,6 +28,7 @@ import org.eclipse.compare.CompareViewerPane;
 import org.eclipse.compare.ICompareContainer;
 import org.eclipse.compare.ICompareInputLabelProvider;
 import org.eclipse.compare.IPropertyChangeNotifier;
+import org.eclipse.compare.LabelContributionItem;
 import org.eclipse.compare.internal.ChangePropertyAction;
 import org.eclipse.compare.internal.CompareEditor;
 import org.eclipse.compare.internal.CompareHandlerService;
@@ -364,6 +366,7 @@ public abstract class ContentMergeViewer extends ContentViewer
 	private Cursor fHSashCursor;
 	private Cursor fVSashCursor;
 	private Cursor fHVSashCursor;
+	private int documentDiffCount;
 
 	private final ILabelProviderListener labelChangeListener = event -> {
 		Object[] elements = event.getElements();
@@ -778,6 +781,7 @@ public abstract class ContentMergeViewer extends ContentViewer
 	}
 
 	private void internalRefresh(Object input) {
+		final String DIFF_COUNT_ID = "DiffCount"; //$NON-NLS-1$
 		IMergeViewerContentProvider content= getMergeContentProvider();
 		if (content != null) {
 			Object ancestor= content.getAncestorContent(input);
@@ -803,7 +807,16 @@ public abstract class ContentMergeViewer extends ContentViewer
 			updateHeader();
 			if (Utilities.okToUse(fComposite) && Utilities.okToUse(fComposite.getParent())) {
 				ToolBarManager tbm = (ToolBarManager) getToolBarManager(fComposite.getParent());
-				if (tbm != null ) {
+				if (tbm != null) {
+					String label = documentDiffCount > 1 ? " Differences" : " Difference"; //$NON-NLS-1$ //$NON-NLS-2$
+					LabelContributionItem labelContributionItem = new LabelContributionItem(DIFF_COUNT_ID,
+							documentDiffCount + label);
+
+					if (tbm.find(DIFF_COUNT_ID) != null) {
+						tbm.replaceItem(DIFF_COUNT_ID, labelContributionItem);
+					} else {
+						tbm.appendToGroup("diffLabel", labelContributionItem); //$NON-NLS-1$
+					}
 					updateToolItems();
 					Display.getDefault().asyncExec(() -> {
 						// relayout in next tick
@@ -909,6 +922,7 @@ public abstract class ContentMergeViewer extends ContentViewer
 			tbm.removeAll();
 
 			// Define groups.
+			tbm.add(new Separator("diffLabel")); //$NON-NLS-1$
 			tbm.add(new Separator("modes"));	//$NON-NLS-1$
 			tbm.add(new Separator("merge"));	//$NON-NLS-1$
 			tbm.add(new Separator("navigation"));	//$NON-NLS-1$
@@ -1450,5 +1464,13 @@ public abstract class ContentMergeViewer extends ContentViewer
 	 */
 	protected boolean isRightEditable() {
 		return fCompareConfiguration.isMirrored() ? fCompareConfiguration.isLeftEditable() : fCompareConfiguration.isRightEditable();
+	}
+
+	/**
+	 * @param docDiffCount - current number of differences in the compare editor
+	 * @since 3.10
+	 */
+	protected void setDocumentDiffCount(int docDiffCount) {
+		documentDiffCount = docDiffCount;
 	}
 }

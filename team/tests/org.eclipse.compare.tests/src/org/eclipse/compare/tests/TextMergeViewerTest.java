@@ -1,5 +1,5 @@
 /*******************************************************************************
- * Copyright (c) 2006, 2018 IBM Corporation and others.
+ * Copyright (c) 2006, 2023 IBM Corporation and others.
  *
  * This program and the accompanying materials
  * are made available under the terms of the Eclipse Public License 2.0
@@ -10,6 +10,7 @@
  *
  * Contributors:
  *     IBM Corporation - initial API and implementation
+ *     Latha Patil (ETAS GmbH) - Issue #504 Show number of differences in the Compare editor
  *******************************************************************************/
 package org.eclipse.compare.tests;
 
@@ -28,13 +29,18 @@ import org.eclipse.compare.internal.*;
 import org.eclipse.compare.structuremergeviewer.DiffNode;
 import org.eclipse.compare.structuremergeviewer.Differencer;
 import org.eclipse.core.runtime.CoreException;
+import org.eclipse.core.runtime.IPath;
+import java.net.URL;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.jface.action.IContributionItem;
+import org.eclipse.jface.action.ToolBarManager;
 import org.eclipse.jface.dialogs.Dialog;
 import org.eclipse.jface.text.*;
 import org.eclipse.swt.graphics.Image;
 import org.eclipse.swt.widgets.*;
 import org.eclipse.ui.PlatformUI;
 import org.junit.Test;
+import org.eclipse.swt.SWT;
 
 public class TextMergeViewerTest  {
 
@@ -480,6 +486,56 @@ public class TextMergeViewerTest  {
 		assertNotNull(rightDoc.getDocumentPartitioner());
 	}
 
+	@Test
+	public void testToolbarLabelContribution() throws Exception {
+
+		IPath path = IPath.fromOSString("labelContributionData/" + "file1.java");
+		URL url = new URL(CompareTestPlugin.getDefault().getBundle().getEntry("/"), path.toString());
+
+		IPath path1= IPath.fromOSString("labelContributionData/" + "file2.java");
+		 URL url1 = new URL(CompareTestPlugin.getDefault().getBundle().getEntry("/"), path1.toString());
+
+		DiffNode parentNode = new DiffNode(new ParentTestElement(), new ParentTestElement());
+		DiffNode testNode = new DiffNode(parentNode, Differencer.CHANGE, null, new EditableTestElement(url.openStream().readAllBytes()), new EditableTestElement(url1.openStream().readAllBytes()));
+
+		runInDialogWithToolbarDiffLabel(testNode, () -> {
+			//Not required
+		});
+	}
+
+	CompareViewerPane fCompareViewerPane;
+	private void runInDialogWithToolbarDiffLabel(DiffNode testNode, Runnable runnable) throws Exception {
+
+		CompareConfiguration compareConfig = new CompareConfiguration();
+		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
+		Dialog dialog = new Dialog(shell) {
+			@Override
+			protected Control createDialogArea(Composite parent) {
+				Composite composite = (Composite) super.createDialogArea(parent);
+				 fCompareViewerPane = new CompareViewerPane(composite, SWT.BORDER | SWT.FLAT);
+				 composite.getChildren();
+				viewer = new TestMergeViewer(fCompareViewerPane,  compareConfig);
+				return composite;
+			}
+		};
+		dialog.setBlockOnOpen(false);
+		dialog.open();
+		viewer.setInput(testNode);
+		fCompareViewerPane.setContent(viewer.getControl());
+		ToolBarManager toolbarManager = CompareViewerPane.getToolBarManager(fCompareViewerPane);
+
+			IContributionItem contributionItem = toolbarManager.find("DiffCount");
+				assertNotNull(contributionItem);
+				LabelContributionItem labelContributionItem=(LabelContributionItem) contributionItem;
+				assertTrue(labelContributionItem.getToolbarLabel().getText().equals("7 Differences"));
+		try {
+			runnable.run();
+		} catch (WrappedException e) {
+			e.throwException();
+		}
+		dialog.close();
+		viewer = null;
+	}
 
 	private void runInDialogWithPartioner(Object input, Runnable runnable, final CompareConfiguration cc) throws Exception {
 		Shell shell = PlatformUI.getWorkbench().getActiveWorkbenchWindow().getShell();
