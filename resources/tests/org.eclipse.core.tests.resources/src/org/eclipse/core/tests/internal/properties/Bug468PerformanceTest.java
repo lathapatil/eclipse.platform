@@ -27,6 +27,7 @@ import org.eclipse.core.resources.ResourcesPlugin;
 import org.eclipse.core.runtime.CoreException;
 import org.eclipse.core.runtime.ICoreRunnable;
 import org.eclipse.core.runtime.NullProgressMonitor;
+import org.eclipse.core.runtime.Platform.OS;
 import org.eclipse.core.runtime.QualifiedName;
 import org.junit.After;
 import org.junit.Before;
@@ -158,9 +159,18 @@ public class Bug468PerformanceTest extends TestCase {
 		}, this.project, IWorkspace.AVOID_UPDATE, new NullProgressMonitor());
 
 		long maxTime = TimeUnit.MILLISECONDS.convert(1, TimeUnit.MINUTES);
+		long maxTimeMacOS = TimeUnit.MILLISECONDS.convert(75, TimeUnit.SECONDS);
+
 		assertTrue("The expected min time(ms): " + 0 + ", actual time(ms): " + timeTakenForDeletingFiles[0],
 				0 <= timeTakenForDeletingFiles[0]);
-		assertTrue("The expected max time(ms): " + maxTime + ", actual time(ms): " + timeTakenForDeletingFiles[0],
-				timeTakenForDeletingFiles[0] <= maxTime);
+
+		if (OS.isWindows() || OS.isLinux()) {
+			assertTrue("The expected max time(ms): " + maxTime + ", actual time(ms): " + timeTakenForDeletingFiles[0],
+					timeTakenForDeletingFiles[0] <= maxTime);
+		} else if (OS.isMac()) {
+			assertTrue(
+					"The expected max time(ms): " + maxTimeMacOS + ", actual time(ms): " + timeTakenForDeletingFiles[0],
+					timeTakenForDeletingFiles[0] <= maxTimeMacOS);
+		}
 	}
 }
